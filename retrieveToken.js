@@ -32,6 +32,7 @@ const generateToken = async () => {
       client_id: credentials.client_id,
       client_secret: credentials.client_secret,
       refresh_token: client.credentials.refresh_token,
+      expiry_date: moment().add(7, 'days').unix(),
     });
     await promises.writeFile(TOKEN_PATH, payload);
   }
