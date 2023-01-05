@@ -10,7 +10,7 @@ const {startDate} = await inquirer.prompt({
   type: 'input',
   name: 'startDate',
   message: 'Start date (YYYY-MM-DD):',
-  default: moment('2022-11-27').format('YYYY-MM-DD'),
+  default: moment().format('YYYY-MM-DD'),
   validate: (startDate) => {
     if (!moment(startDate).isValid()) {
       return 'Please enter a valid date'
@@ -23,7 +23,9 @@ const {endDate} = await inquirer.prompt({
     type: 'input',
     name: 'endDate',
     message: 'End date (YYYY-MM-DD):',
-    default: moment('2022-11-27').format('YYYY-MM-DD'),
+    // set the default to startDate because the eval forms
+    // are usually filled out the same day as the session
+    default: moment(startDate).format('YYYY-MM-DD'),
     validate: (endDate) => {
       if (!moment(endDate).isValid()) {
         return 'Please enter a valid date!'
@@ -44,18 +46,20 @@ let sessions = await sheets.spreadsheets.values.get({
   range: 'Session Tracker!A'+START_ROW_SEARCH+':P',
 })
 
-if (!sessions.data || sessions.data.values.length === 0) {
-  console.log('No data found.')
+sessions = sessions.data.values
+.map((session, i) => [i+START_ROW_SEARCH, ...session])
+.filter(([,,,,,,, sessionDate]) => moment(sessionDate, 'MM/DD/YYYY').isBetween(startDate, endDate, 'day', '[]'))
+
+if (!sessions || sessions.length === 0) {
+  console.log('No sessions found.')
   process.exit(0)
 }
 
 const browser = await puppeteer.launch({ headless: false })
 
-sessions = sessions.data.values
-.filter(([,,,,,, sessionDate]) => moment(sessionDate, 'MM/DD/YYYY').isBetween(startDate, endDate, 'day', '[]'))
-
 for (let i = 0; i < sessions.length; i++) {
   let [
+    rowNumber,
     classCode,,
     name,
     email,,,
@@ -147,7 +151,7 @@ for (let i = 0; i < sessions.length; i++) {
     callbacksCheckbox,
     classesCheckbox,,
     cssCheckbox,
-    developmentWorkflowCheckbox,,
+    devWorkflowCheckbox,,
     excelCheckbox,
     es6Checkbox,
     firebaseCheckbox,,
@@ -406,4 +410,21 @@ for (let i = 0; i < sessions.length; i++) {
   await page.waitForTimeout(500)
   // fill out the textarea with 'N/A' since we don't normally have comments or concerns
   await commentsConcernsTextarea.type('N/A')
+
+
+  // update google sheet to state that the eval has been completed
+  sheets.spreadsheets.values.update({
+    spreadsheetId: config.spreadsheetId,
+    range: `Session Tracker!O${rowNumber}`,
+    valueInputOption: 'RAW',
+    resource: {
+      values: [['Y']]
+    }
+  }, (err, res) => {
+    if (err) {
+      console.error(err)
+    } else {
+      console.log(res)
+    }
+  })
 }
