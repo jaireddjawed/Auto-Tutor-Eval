@@ -14,7 +14,7 @@
     "util": "^0.12.5"
   },
   "scripts": {
-    "start": "ts-node scraper.ts"
+    "start": "node --no-warnings scraper.js"
   },
   "devDependencies": {
     "@types/inquirer": "^6.3.1"
