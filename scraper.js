@@ -74,7 +74,14 @@ for (let i = 0; i < sessions.length; i++) {
   const page = await browser.newPage()
   await page.goto('https://bit.ly/tutors-eval')
 
-  const {studentTold, rating} = await inquirer.prompt([
+  if (topicsCovered) {
+    topicsCovered = topicsCovered.toLowerCase().trim()
+  }
+  else {
+    topicsCovered = ''
+  }
+
+  const {studentTold, rating, preworkTopicsCovered} = await inquirer.prompt([
     {
       type: 'list',
       default: 'email',
@@ -88,6 +95,14 @@ for (let i = 0; i < sessions.length; i++) {
       choices: ['1', '2', '3', '4', '5', 'No Show'],
       message: 'How would you rate your session with '+name+'?',
       name: 'rating',
+    },
+    {
+      type: 'input',
+      message: 'What prework topics did you cover with '+name+'?',
+      name: 'preworkTopicsCovered',
+      when() {
+        return topicsCovered.includes('prework')
+      },
     },
   ])
 
@@ -219,12 +234,12 @@ for (let i = 0; i < sessions.length; i++) {
 
   // session start time section
   await page.waitForTimeout(500)
-  const [sessionStartHour, sessionStartMinute] = sessionTimeIn.split(':')
+  let [sessionStartHour, sessionStartMinuteAMPM] = sessionTimeIn.split(':')
+  let [sessionStartMinute, sessionStartAmPm] = sessionStartMinuteAMPM.split(' ')
   await sessionStartHourInput.type(sessionStartHour)
   await sessionStartMinuteInput.type(sessionStartMinute)
 
   // click on the am/pm dropdown
-  await sessionStartAmPmInput.click()
 
   // session end time section
   await page.waitForTimeout(500)
@@ -235,13 +250,16 @@ for (let i = 0; i < sessions.length; i++) {
   // prework session section
   await page.waitForTimeout(500)
 
-  topicsCovered = !!topicsCovered ? topicsCovered.toLowerCase().trim() : ''
   if (topicsCovered.includes('prework'))
     await preWorkYesRadio.click()
   else
     await preWorkNoRadio.click()
 
-  // todo: prework topics covered section
+  // prework topics covered section
+  if (preworkTopicsCovered.trim() !== '') {
+    await page.waitForTimeout(500)
+    await preWorkTopicsCoveredTextarea.type(preworkTopicsCovered)
+  }
 
   // topics covered section
   if (sessionAttendance.trim() === 'No Show') {
@@ -419,12 +437,6 @@ for (let i = 0; i < sessions.length; i++) {
     valueInputOption: 'RAW',
     resource: {
       values: [['Y']]
-    }
-  }, (err, res) => {
-    if (err) {
-      console.error(err)
-    } else {
-      console.log(res)
     }
   })
 }
