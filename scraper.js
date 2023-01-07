@@ -256,7 +256,7 @@ for (let i = 0; i < sessions.length; i++) {
     await preWorkNoRadio.click()
 
   // prework topics covered section
-  if (preworkTopicsCovered.trim() !== '') {
+  if (preworkTopicsCovered) {
     await page.waitForTimeout(500)
     await preWorkTopicsCoveredTextarea.type(preworkTopicsCovered)
   }
@@ -429,6 +429,19 @@ for (let i = 0; i < sessions.length; i++) {
   // fill out the textarea with 'N/A' since we don't normally have comments or concerns
   await commentsConcernsTextarea.type('N/A')
 
+  const onSubmitClick = () => page.evaluate(() => {
+    const [, submitButton] = document.querySelectorAll('div[role="button"]')
+    return new Promise((resolve) => {
+      submitButton.addEventListener('click', () => {
+        resolve()
+      })
+    })
+  })
+
+  // wait for the submit button to be clicked before updating the google sheet
+  // to state that the eval has been completed
+  await page.waitForTimeout(500)
+  await onSubmitClick()
 
   // update google sheet to state that the eval has been completed
   sheets.spreadsheets.values.update({
